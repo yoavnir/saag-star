@@ -10,7 +10,7 @@
 
 <!DOCTYPE rfc SYSTEM "rfc2629.dtd" >
 
-<rfc ipr="trust200902" docName="draft-nir-saag-star-00" category="info">
+<rfc ipr="trust200902" docName="draft-nir-saag-star-01" category="info">
   <front>
     <title abbrev="STAR Certificates">Considerations For Using Short Term Certificates</title>
     <author initials="Y." surname="Nir" fullname="Yoav Nir">
@@ -37,9 +37,22 @@
         <email>yaronf.ietf@gmail.com</email>
       </address>
     </author>
-    <date year="2017"/>
+    <author fullname="Toerless Eckert" initials="T.T.E" surname="Eckert">
+      <organization abbrev="Huawei">Huawei USA - Futurewei Technologies Inc.</organization>
+      <address>
+        <postal>
+          <street>2330 Central Expy</street>
+          <city>Santa Clara</city>
+          <code>95050</code>
+          <country>USA</country>
+        </postal>
+        <email>tte+ietf@cs.fau.de</email>
+      </address>
+    </author>
 
-<workgroup>SAAG</workgroup>
+    <date year="2018"/>
+
+<workgroup>SecDispatch</workgroup>
 
     <abstract>
       <t> Recently there has been renewed interest in an old idea: Issue certificates with
@@ -63,26 +76,27 @@
         communications typically include certificate authorities, end entities and relying
         parties, with some nodes in the network having more than one of these roles.</t>
       <t> When deploying a system involving secure communications, one of the challenges 
-        is how to deal with an End Entity losing control of its private key or having its
-        secrecy potentially compromised. The standardized ways of dealing with this is 
-        adding a protocol layer for revocation such as CRLs (<xref target="RFC5280"/>) or
-        OCSP (<xref target="RFC6960"/>).</t>
+        is how to deal with compromise of an End Entity's private key. The standard way of 
+        dealing with this is adding a protocol layer for revocation such as CRLs 
+        (<xref target="RFC5280"/>) or OCSP (<xref target="RFC6960"/>).</t>
       <t> Such revocation protocols have drawbacks. Although caching of CRLs and OCSP 
         responses is allowed, each setup of a secure channel may require accessing the CRL
         distribution point (DP) or the OCSP responder. This is both time consuming and 
         provides the system with a few more modes of failure. Assuring reliability of the
         revocation service increases the cost, and overcoming the latency issue requires
-        changes to the security protocols.</t>
+        changes to the security protocols. All other things being equal, a system that 
+        includes revocation checking is more complex and less reliable than a system that
+        does not include it.</t>
       <t> For these reasons it is attractive to forego revocation checking. Some deployed 
         systems do this by either eliminating the CRL DP and OCSP extensions from the 
         certificates, or ignoring network and timeout errors in fetching revocation 
-        information. Both practices reduce the efficacy of revocation.</t>
+        information. Both practices reduce the security of the system.</t>
       <t> An alternative solution to the revocation problem is to issue certificates with
-        a short validity period. Normally certificates are issued with a validity period 
-        of between a few months and a few years. With a shorter validity period if the 
-        private key is compromised the potential for abuse is lower because the 
-        certificate and its private key expire within a short period of time - a few hours 
-        to a few days.</t>
+        a short validity period and forego revocation checking. Normally certificates are 
+        issued with a validity period of between a few months and a few years. With a 
+        shorter validity period if the private key is compromised the potential for abuse 
+        is lower because the certificate and its private key expire within a short period 
+        of time - a few hours to a few days.</t>
       <t> The rest of this document describes operational and security considerations with
         using short term certificates.</t>
       <section anchor="mustshouldmay" title="Conventions Used in This Document">
@@ -101,7 +115,7 @@
           certificate requests and send them to CAs for signature. Some systems are
           designed around a "push" operation where either the CA or a management function
           generates a new certificate and installs it on the end entity. The text in the
-          document uses pull terminology, but is equally relevant for push design.</t>
+          document uses pull terminology, but is equally relevant for a push design.</t>
       </section>
     </section>
     <section anchor="star" title="Short Term Auto Renewed Certificates">
@@ -110,17 +124,16 @@
         relatively short. Whereas normally certificates are issued for a period of time 
         between a few months and a few years, short term certificates usually expire after
         a few hours, a few days, or at a limit a couple of weeks.</t>
-      <t> While it is not a part of the definition, short term certificates typically have
-        neither a CRL DP extension nor an OCSP authorityInformationAccess extension. In
-        other words such certificates cannot be revoked. Instead, they are valid until 
-        they expire.</t>
+      <t> The certificates discussed in this document have neither a CRL DP extension nor 
+        an OCSP authorityInformationAccess extension. In other words such certificates 
+        cannot be revoked. Instead, they are valid until they expire.</t>
       <t> Automatic certificate renewal is getting ever more popular with enrollment 
         protocols such as EST (<xref target="RFC7030"/>) or ACME (<xref target="I-D.ietf-acme-acme"/>). 
         For short term certificates automatic renewal is essential as a human cannot be 
         expected to flawlessly perform a manual renewal every few days or hours. This 
-        document does not recommend any particular automatic renewal method, but does 
-        recommend (<xref target="auto"/>) that some such method be used. Automatic 
-        renewal processing can roll over the keys from one certificate to its successor, or 
+        document does not recommend any particular automatic renewal method, but <xref 
+        target="auto"/> recommends that some such method be used. Automatic renewal 
+        processing can roll over the keys from one certificate to its successor, or 
         it can generate new keys with each Certificate generation. As revocation may not 
         exist, multiple certificates for the same EE may be valid at any given time.</t>
       <t> The solution for revocation in this scheme is to stop the automatic renewal. The 
@@ -135,13 +148,36 @@
           EEs rather than the RPs retrieve the OCSP response and send it as part of the 
           protocol. OCSP stapling is described for TLS in <xref target="RFC6961"/> and
           <xref target="RFC6066"/>, and for IKE in <xref target="RFC4806"/>.</t>
-        <t> STAR has two advantages over OCSP stapling: <list style="symbols">
+        <t> STAR has several advantages over OCSP stapling: <list style="symbols">
           <t> A CA that only signs certificates is simpler than a CA that both signs 
             certificates and issues OCSP responses. In fact, a CA for STAR does not need
             to keep any record of issued certificates.</t>
-          <t> OCSP stapling in TLS works only for the server as end entity. There is no 
-            provision for sending the OCSP response for a client certificate in the 
-            protocol.</t></list></t>
+          <t> A system that does not use CRLs or OCSP need not have an always-available 
+            DP for delivering those CRLs or OCSP responses. This reduces both complexity 
+            and attack surface.</t>
+          <t> OCSP stapling in TLS versions prior to 1.3 works only for the server as end 
+            entity. There was no provision for sending the OCSP response for a client 
+            certificate in the protocol.</t></list></t>
+      </section>
+      <section anchor="casefor" title="The Case For Foregoing Revocation">
+        <t> When explaining PKI to people, it is hard to justify why the CA or a delegate
+          needs to both sign blob-1 (the certificate) and also sign blob-2 (the CRL or 
+          OCSP response) to tell relying parties that blob-1 is still valid. Surely one 
+          signed blob should be enough.</t>
+        <t> The explanation that we come up with is that traditionally issuing a 
+          certificate required human intervention, while the revocation checking object
+          could be issued automatically and at great frequency. So blob-1 would have to
+          be valid for long enough to not over-burden the human charged with maintaining 
+          them, while blob-2 could be re-issued frequently.</t>
+        <t> This explanation no longer holds up. While the initial certificate enrollment 
+          may need to be initiated by a human, protocols exist today that make certificate
+          renewal just as automated as CRL issuance. Certificates can be just as frequently 
+          issued as CRLs were in the past. The added complexity is no longer needed.</t>
+        <t> In real systems such as the web relying parties or end entities cache 
+          revocation objects as long as it's allowed. If a CRL has a nextUpdate field that
+          is 4 days in the future, a typical system will not attempt to fetch a new one 
+          before those 4 days have elapsed. For this reason, moving to STAR certificates 
+          provides a similar level of security to what is generally practiced on the web.</t>
       </section>
     </section>
     <section anchor="usecases" title="Use Cases">
@@ -166,6 +202,36 @@
       </section>
       <section anchor="deleg" title="Certificate Delegation for Content Delivery Networks">
         <t> TBA</t>
+      </section>
+      <section anchor="ANI" title="Autonomic Networking Infrastructure">
+        <t>The Autonomic Network Infrastructure (see <xref target="I-D.ietf-anima-reference-model"/>)
+          is an IETF ANIMA Working Group developed network system architecture to provide  the
+	  foundation for both future "autonomic networks" (AN), as well as the infrastructure to
+	  enable zero-touch secure bootstrapping of domain-wide PKI certificates for network
+	  equipment (BRSKI, see <xref target="I-D.ietf-anima-bootstrapping-keyinfra"/>) as well as the
+	  set-up of a zero-touch, secure communications fabric for management of existing networks
+	  (ACP, see <xref target="I-D.ietf-anima-autonomic-control-plane"/>, especially in the context
+	  of evolving SDN control &amp; management (see <xref target="I-D.ietf-anima-stable-connectivity"/>) .
+          These domain certificates are furthermore meant to be reuseable across
+	  all network services between network equipment in that domain, therefore allowing to
+	  eliminate the need for per-service crypto management (IGP, multicast, BGP, netconf/COPS/radius
+	  connections,...).</t>
+	<t>Overall, the PKI related functions of ANI intend to increase proliferation of PKI
+	  security through simplification, achieved through automation and making solutions more
+	  resilient by minimizing managed component requirements. CRL or OCSP introduce another
+	  set of servers/services that needs to be managed/automated/distributed. The connectivity
+	  requirement to such servers and/or the grace periods during which connectivity to them
+	  is not required introduce more complex system/security design parameters.</t>
+	<t>With ANI/ACP/BRSKI, renewal of certificates is fully automated and therefore shorter lifetimes
+	  of certificates can easily be used to avoid the additional need for CRL/OCSP.
+	  The limitation on reducing certificate lifetimes is only the desired maximum length of
+	  time during which connectivity to a CA for renewal may not exist - and the maximum renewal
+	  rate of certificates that can be supported by those CA.</t>
+        <t>Because of the ACP, connectivity to the CA is also more resilient against
+	  network/provisioning/configuration problems than network without an ACP.
+	  Lastly, the whole ANI is built and maintained autonomously without the need of
+	  any configurations except for one or more seed-nodes that perform an expanded version
+	  of a PKI Registration Authority.</t>
       </section>
     </section>
     <section anchor="op" title="Operational Considerations">
@@ -280,7 +346,77 @@
           proprietary methods have been shipping for years. The IETF is in the process of
           standardizing the ACME protocol for enrollment and renewal (<xref 
           target="I-D.ietf-acme-acme"/>) and an extension is proposed to make it more 
-          suitable for STAR certificates (<xref target="I-D.ietf-acme-star"/>).</t>
+          suitable for STAR certificates (<xref target="I-D.ietf-acme-star"/>). The ANI as 
+          described in <xref target="ANI"/> is a complete zero touch system design 
+          providing and relying on automatic certificate renewal.</t>
+      </section>
+      <section anchor="re-enrollments" title="Secure (Re-)Enrollments">
+         <t>When short lived certificates expire, automatic re-enrollment can further help
+	   to provide survivable, resilient PKI security. Traditionally, initial enrollments,
+	   even with otherwise automated solutions such as EST (<xref target="RFC7030"/>) required
+	   a manual interaction, or else the device had to perform TOFU (Trust On First Use)
+	   to be automatically enrolled. TOFU is even more problematic for re-enrollments
+	   and becomes more problematic, the shorter lived certificates and/or trust
+	   anchors are. Consider the risk where during re-enrollment, the device may already be
+	   fully configured and could be taken over by an attacker just having to wait for a short
+	   lived certificate device certificate or trust anchor to expire.  Or consider devices
+	   auto-resetting themselves to factory conditions to avoid this problem and then not having
+	   to be re-enrolled, but also be re-configured - in the absence of fully zero-touch 
+	   provisioning solutions.</t>
+	   
+	   <t>ANIs BRSKI protocol (<xref target="I-D.ietf-anima-bootstrapping-keyinfra"/>, which
+	   introduces extensions to EST), and NetConf Zero Touch
+	   (<xref target="I-D.ietf-netconf-zerotouch"/> allow fully automated enrollment and
+	   re-enrollment of device certificate and trust anchors through the use of "vouchers"
+	   (<xref target="I-D.ietf-anima-voucher"/>). These are new digital artifacts that
+	   allow enrolling devices to securely trust domains to (re-)enroll them. They work
+	   by providing a signed statement by a representative of the manufacturer of the
+	   device, that the device with a specified identity (e.g: IDevID) should trust a
+	   particular domain - identified by an initial trust anchor. This allows to overcome
+	   the biggest challenge of expired short lived certificates/trust-anchors.</t>
+
+	   <t>Furthermore, if the certificate and/or trust anchors are required for security
+	   of network connectivity - such as routing protocol security or network layer encryption -
+	   to even reach a re-enrollment server, then there is yet another challenge with
+	   short lived certificates/trust-anchors and their higher likelyhood of expiring.</t>
+
+	   <t>In the case of ANI, network layer security (e.g.: IPsec) is used for protecting
+	   network connectivity including to reach the EST renewal server. When certificate/TA
+	   are expired, renewal can not be used. Instead though, automatic re-enrollment
+	   can be used, which does not rely on generic network layer security, but instead
+	   relies on its own proxy service to provide connectivity for such devices that need
+	   to re-enroll. Nevertheless, re-enrollment may be a complex operation due to the
+	   potential need to involve the above mentioned representative entity of the manufacturer
+	   to generate vouchers.</t>
+      </section>
+
+      <section anchor="future" title="Future enhancements for renewal/re-enrollment">
+         <t>One easy improvement that is specifically of interest with the use of short-lived
+	   device certificates/trust-anchors is a new interpretation of the lifetime of certificates. 
+	   Today, there is no clear distinction when or how to apply the lifetime, and in result,
+	   it is usually assumed to be applicable to all operations relying on those certificates.</t>
+
+	 <t>In the case of short-lived certificates, the elements performing certificate
+	   renewal/re-enrollment can easily have a different interpretation of the lifetime
+	   and may not rely on what the certificate itself says. This allows to turn
+	   re-enrollments into renewals and avoid possible complexities or manual steps potentially
+	   required for re-enrollment (depending on the system used).</t>
+	 
+	 <t>In the case of BRSKI/EST, there is only one TLS connection used for renewal
+	   and/or re-enrollment and expiry affects the certificates used on this TLS connection.
+	   The server uses EST for renewal or the extended signaling of BRSKI for re-enrollment.
+	   When a device with expired, short-lived certificate connects to the BRSKI/EST server,
+	   this server could allow to perform only simple EST renewal instead of re-enrollment
+	   with a voucher by simply considering the lifetime of the presented (and expired)
+	   device certificate to be extended.</t>
+
+	 <t>This type of re-interpretation requires primarily some generic work to allow this
+	   type of interpretation - and then per-solution work to leverage this interpretation. 
+	   In the case of BRSKI/EST for example, devices would simply use their expired domain
+	   certificate to authenticate themselves and perform certificate renewal - instead
+	   of using their IDevID and trying to re-enroll (which is a more complex operation
+	   with potentially external dependenices against the manufacturer component).</t>
+
       </section>
       <section anchor="ct" title="Certificate Transparency">
         <t> Certificate Transparency (CT), <xref target="RFC6962"/> is about keeping a log of
@@ -485,6 +621,12 @@
           <date year="2012"/>
         </front>
       </reference>
+      <?rfc include="reference.I-D.ietf-anima-reference-model"?>
+      <?rfc include="reference.I-D.ietf-anima-bootstrapping-keyinfra"?>
+      <?rfc include="reference.I-D.ietf-anima-autonomic-control-plane"?>
+      <?rfc include="reference.I-D.ietf-anima-voucher"?>
+      <?rfc include="reference.I-D.ietf-netconf-zerotouch"?>
+      <?rfc include="reference.I-D.ietf-anima-stable-connectivity"?>
     </references>
     
     <!-- ====================================================================== -->
